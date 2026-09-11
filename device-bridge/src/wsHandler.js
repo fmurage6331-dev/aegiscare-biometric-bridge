@@ -64,6 +64,7 @@
 
 const { evaluate } = require('./verificationEngine');
 const { WORKSTATION_ID, SCANNER_SIMULATE } = require('./config');
+const { logConsentEvent } = require('./consentLogger');
 
 function handleWebSocket(ws, req) {
   const clientIp = req.socket.remoteAddress;
@@ -143,6 +144,16 @@ function handleWebSocket(ws, req) {
               initiatedBy: initiatedBy || 'SYSTEM',
             });
             console.log(`[WS] → DECISION (simulated)`, decision.verdict);
+
+            // Log consent event to Supabase (non-blocking)
+            logConsentEvent({
+              patientId:   patientId,
+              triggerType: trigger,
+              decision:    decision,
+            }).catch((err) => {
+              console.error('[WS] Consent log failed:', err.message);
+            });
+
             ws.send(JSON.stringify({
               type:      'DECISION',
               simulated: true,
@@ -178,6 +189,15 @@ function handleWebSocket(ws, req) {
         });
 
         console.log(`[WS] → DECISION`, decision.verdict);
+
+        // Log consent event to Supabase (non-blocking)
+        logConsentEvent({
+          patientId:   patientId,
+          triggerType: trigger,
+          decision:    decision,
+        }).catch((err) => {
+          console.error('[WS] Consent log failed:', err.message);
+        });
 
         ws.send(JSON.stringify({
           type:      'DECISION',
