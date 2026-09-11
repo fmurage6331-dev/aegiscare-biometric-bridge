@@ -7,6 +7,8 @@ const {
   removeFromWhitelist,
   EXEMPTION_CODES,
 } = require('./whitelist');
+const { checkEligibility }  = require('./eligibilityCheck');
+const { logConsentEvent }   = require('./consentLogger');
 
 const router = express.Router();
 
@@ -114,6 +116,76 @@ router.get('/exemption-codes', (req, res) => {
     },
     legalBasis: 'Regulation 38, Social Health Insurance Regulations 2024.',
   });
+});
+
+/**
+ * POST /eligibility
+ * Check SHA eligibility for a patient before check-in.
+ * Body: { crNumber, fundType }
+ */
+router.post('/eligibility', async (req, res) => {
+  const { crNumber, fundType } = req.body;
+
+  if (!crNumber || !fundType) {
+    return res.status(400).json({
+      error: 'crNumber and fundType are required.',
+    });
+  }
+
+  try {
+    const result = await checkEligibility({ crNumber, fundType });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /consent-events/patient/:patientId
+ * Retrieve consent event history for a patient
+ * (proxied from Supabase — for audit view in AegisCare).
+ */
+router.get('/consent-events/patient/:patientId', async (req, res) => {
+  const { AEGISCARE_API_URL, AEGISCARE_SERVICE_KEY } = require('./config');
+
+  if (!AEGISCARE_API_URL || !AEGISCARE_SERVICE_KEY) {
+    return res.status(503).json({
+      error: 'Supabase not configured on this bridge.',
+    });
+  }
+
+  try {
+    const url =
+      `${AEGISCARE_API_URL}/rest/v1/consent_events` +
+      `?patient_id=eq.${encodeURIComponent(req.params.patientId)}` +
+      `&order=created_at.desc&limit=50`;
+
+    const response = await fetch(url, {
+      headers: {
+        'apikey':        AEGISCARE_SERVICE_KEY,
+        'Authorization': `Bearer ${AEGISCARE_SERVICE_KEY}`,
+        'Accept':        'application/json',
+      },
+    });
+
+    const data = await response.json();
+    res.json({ events: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /sdk/aegiscare-biometric-client.js
+ * Serves the browser client SDK.
+ * AegisCare frontend imports this file directly.
+ */
+router.get('/sdk/aegiscare-biometric-client.js', (req, res) => {
+  const path = require('path');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(
+    path.resolve(__dirname, '../client-sdk/aegiscare-biometric-client.js')
+  );
 });
 
 module.exports = router;

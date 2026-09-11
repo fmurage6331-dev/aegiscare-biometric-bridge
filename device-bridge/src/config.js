@@ -1,9 +1,12 @@
 require('dotenv').config();
 
 module.exports = {
-  PORT:                process.env.PORT || 4000,
-  WORKSTATION_ID:      process.env.WORKSTATION_ID || 'WS-UNKNOWN-01',
-  AEGISCARE_API_URL:   process.env.AEGISCARE_API_URL,
+  PORT:                 process.env.PORT || 4000,
+  WORKSTATION_ID:       process.env.WORKSTATION_ID || 'WS-UNKNOWN-01',
+  AEGISCARE_API_URL:    process.env.AEGISCARE_API_URL,
   AEGISCARE_SERVICE_KEY: process.env.AEGISCARE_SERVICE_KEY,
-  SCANNER_SIMULATE:    process.env.SCANNER_SIMULATE === 'true',
+  SCANNER_SIMULATE:     process.env.SCANNER_SIMULATE === 'true',
+  SHA_BASE_URL:         process.env.SHA_BASE_URL,
+  SHA_CLIENT_ID:        process.env.SHA_CLIENT_ID,
+  SHA_CLIENT_SECRET:    process.env.SHA_CLIENT_SECRET,
 };
